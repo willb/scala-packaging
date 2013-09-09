@@ -5,8 +5,11 @@
 %global jansi_jar /usr/share/java/jansi.jar
 %global scaladir %{_datadir}/scala
 
+# XXX
+%global _default_patch_fuzz 2
+
 Name:           scala
-Version:        2.10.1
+Version:        2.10.2
 Release:        2%{?dist}
 Summary:        A hybrid functional/object-oriented language for the JVM
 BuildArch:      noarch
@@ -16,19 +19,23 @@ Group:          Development/Languages
 License:        BSD
 URL:            http://www.scala-lang.org/
 # Source
-Source0:	http://www.scala-lang.org/downloads/distrib/files/scala-sources-%{fullversion}.tgz
+Source0:	https://github.com/scala/scala/archive/v%{fullversion}.tar.gz
 Source1:	scala-library-2.10.0-bnd.properties
 # Source0:        http://www.scala-lang.org/downloads/distrib/files/scala-sources-%{fullversion}.tgz
 # Change the default classpath (SCALA_HOME)
 Patch1:		scala-2.10.0-tooltemplate.patch
 # Use system jline2 instead of bundled jline2
-Patch2:	        scala-2.10.0-use_system_jline.patch
+Patch2:         0002-use-system-JLine.patch
 # change org.scala-lang jline in org.sonatype.jline jline
 Patch3:	        scala-2.10.0-compiler-pom.patch
 # Patch Swing module for JDK 1.7
-Patch4:	        scala-2.10.0-java7.patch
+Patch4:	        0003-java7-fixes.patch
 # Fix aQuate issue
-Patch5:         scala-2.10.0-bnd.patch
+Patch5:         0004-bnd-removal.patch
+# JLine API compatibility
+Patch6:         0001-JLine2-fixes.patch
+# Don't try to update timestamps on system jars; use system maven ant tasks
+Patch7:         0005-use-system-jars-appropriately.patch
  
 Source21:       scala.keys
 Source22:       scala.mime
@@ -95,12 +102,15 @@ object-oriented and functional programming. This package contains examples for
 the Scala programming language
 
 %prep
-%setup -q -n scala-%{fullversion}-sources
+%setup -q -n scala-%{fullversion}
+%patch6 -p1 -b .rvk 
 %patch1 -p1 -b .tool
+
 %patch2 -p1 -b .sysjline
 # %patch3 -p0 -b .compiler-pom
 %patch4 -p1 -b .jdk7
 %patch5 -p1 -b .bndx
+%patch7 -p1 -b .notouching
 
 pushd src
 rm -rf jline
@@ -134,7 +144,7 @@ cp -rf %{SOURCE31} .
 
 export ANT_OPTS="-Xms1024m -Xmx1024m"
 # ant -f scala-bootstript.xml
-ant build docs || exit 1
+ant -d build docs || exit 1
 pushd build/pack/lib
 cp %{SOURCE1} bnd.properties
 java -jar $(build-classpath aqute-bnd) wrap -properties \
@@ -304,7 +314,7 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 * Mon Nov 03 2008 Geoff Reedy <geoff@programmer-monk.net> - 2.7.2-0.3.RC6
 - bump release to fix upgrade path
 
-* Thu Nov 01 2008 Geoff Reedy <geoff@programmer-monk.net> - 2.7.2-0.1.RC6
+* Sat Nov 01 2008 Geoff Reedy <geoff@programmer-monk.net> - 2.7.2-0.1.RC6
 - update to 2.7.2-RC6
 
 * Thu Oct 30 2008 Geoff Reedy <geoff@programmer-monk.net> - 2.7.2-0.1.RC5
