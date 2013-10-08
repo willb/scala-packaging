@@ -2,8 +2,9 @@
 <!-- scala 2.10.0-RC3 build file by gil -->
 <!-- for rebuild only this scala components -->
 <project name="scala-components" basedir=".">
-      
-   <property name="version"               value="2.10.0-RC3"/>
+  <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="/usr/share/java/ant/ant-contrib.jar"/>
+
+   <property name="version"               value="2.10.2"/>
    <property name="lib.dir"               value="${basedir}/lib"/>
    
    <property name="fjbg.dir"              value="${basedir}/fjbg"/>
@@ -11,6 +12,11 @@
    <property name="fjbg.build.dir"        value="${fjbg.dir}/classes"/>
    <property name="fjbg.jar"              value="${basedir}/lib/fjbg.jar"/>
       
+   <property name="scalap.dir"              value="${basedir}/scalap"/>
+   <property name="scalap.src.dir"          value="${basedir}/src/scalap"/>
+   <property name="scalap.build.dir"        value="${scalap.dir}/classes"/>
+   <property name="scalap.jar"              value="${basedir}/lib/scalap.jar"/>
+
    <property name="forkjoin.dir"          value="${basedir}/forkjoin"/>
    <property name="forkjoin.src.dir"      value="${basedir}/src/forkjoin"/>
    <property name="forkjoin.build.dir"    value="${forkjoin.dir}/classes"/>
@@ -22,10 +28,10 @@
    <property name="msil.jar"              value="${basedir}/lib/msil.jar"/>
       
    <target name="build" 
-      depends="build.fjbg,build.forkjoin,build.msil" description="Compile the sources">
+      depends="build.fjbg,build.forkjoin,build.msil, build.scalap" description="Compile the sources">
    </target>
       
-   <target name="dist" depends="clean,build"
+   <target name="dist" depends="clean,build,bins"
       description="generate the distribution" >
    </target>
       
@@ -38,15 +44,49 @@
      <delete dir="${msil.dir}" />
    </target>
       
-   <path id="scalac.classpath">
-    <fileset dir="/usr/share/java" includes="ant.jar"/>
-    <fileset dir="${lib.dir}" includes="scala-compiler.jar"/>
-    <fileset dir="${lib.dir}" includes="scala-library.jar"/>
-    <fileset dir="${lib.dir}" includes="scala-reflect.jar"/>
-    <fileset dir="${basedir}/lib" includes="fjbg.jar"/>
-    <fileset dir="${basedir}/lib" includes="forkjoin.jar"/>
-    <pathelement location="${msil.build.dir}"/>
+   <path id="bootstrap.classpath">
+     <fileset dir="/usr/share/java" includes="ant.jar"/>
+     <fileset dir="${lib.dir}" includes="scala-compiler.jar"/>
+     <fileset dir="${lib.dir}" includes="scala-library.jar"/>
+     <fileset dir="${lib.dir}" includes="scala-reflect.jar"/>
+     <fileset dir="${basedir}/lib" includes="fjbg.jar"/>
+     <fileset dir="${basedir}/lib" includes="forkjoin.jar"/>     
    </path>
+
+   <path id="installed.classpath">
+     <fileset dir="/usr/share/java" includes="ant.jar"/>
+     <fileset dir="/usr/share/scala/lib" includes="scala-compiler.jar"/>
+     <fileset dir="/usr/share/scala/lib" includes="scala-library.jar"/>
+     <fileset dir="/usr/share/scala/lib" includes="scala-reflect.jar"/>   
+     <fileset dir="/usr/share/scala/lib" includes="fjbg.jar"/>   
+     <fileset dir="/usr/share/scala/lib" includes="forkjoin.jar"/>   
+   </path>
+
+   <if>
+     <isset property="doBootstrapBuild"></isset>
+     <then>
+       <path id="scalac.classpath">
+	 <path refid="bootstrap.classpath"/>
+	 <pathelement location="${msil.build.dir}"/>
+       </path>
+     </then>
+     <else>
+       <path id="scalac.classpath">
+	 <path refid="installed.classpath"/>
+	 <pathelement location="${msil.build.dir}"/>
+       </path>
+     </else>
+   </if>
+
+   <target name="build.scalap" description="Build scalap">
+    <mkdir dir="${scalap.build.dir}"/>
+     <compile-scala
+	 dirsrc="${scalap.src.dir}" 
+	 destfile="${scalap.build.dir}" />
+     <make-jar
+	 basedir="${scalap.build.dir}" 
+	 destfile="${scalap.jar}" />
+   </target>
       
    <target name="build.fjbg" description="Build Scala fjbg component">
     <compile-javac
@@ -91,6 +131,7 @@
     <sequential>
     <mkdir dir="@{destfile}"/>
       <javac
+        includeantruntime="false"	
         srcdir="@{dirsrc}"
         destdir="@{destfile}"
         debug="true"
@@ -109,6 +150,7 @@
     <attribute name="buildclasspath" default=""/>
     <sequential>
       <javac
+	includeantruntime="false"	
         srcdir="@{dirsrc}"
         destdir="@{destfile}"
         includes="**/*.java"
@@ -149,4 +191,22 @@
     </sequential>
   </macrodef>
       
+  <target name="bins">
+    <path id="bin.tool.path">
+      <fileset dir="lib">
+	<include name="*.jar"/>
+      </fileset>
+      <!-- <path refid="asm.classpath"/>
+	   <path refid="forkjoin.classpath"/>
+	   <path refid="aux.libs"/> -->
+    </path>
+    
+    <taskdef name="mk-bin" classname="scala.tools.ant.ScalaTool" classpathref="bin.tool.path"/>
+    <mkdir dir="bin"/>
+    <mk-bin file="bin/scala"    class="scala.tools.nsc.MainGenericRunner" javaFlags="${java.flags}"/>
+    <mk-bin file="bin/scalac"   class="scala.tools.nsc.Main"              javaFlags="${java.flags}"/>
+    <mk-bin file="bin/scaladoc" class="scala.tools.nsc.ScalaDoc"          javaFlags="${java.flags}"/>
+    <mk-bin file="bin/fsc"      class="scala.tools.nsc.CompileClient"     javaFlags="${java.flags}"/>
+    <mk-bin file="bin/scalap"   class="scala.tools.scalap.Main"           javaFlags="${java.flags}"/>
+  </target>
 </project>

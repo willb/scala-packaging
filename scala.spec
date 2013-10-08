@@ -160,9 +160,8 @@ export ANT_OPTS="-Xms2048m -Xmx2048m %{do_bootstrap}"
 # NB:  the "build" task is (unfortunately) necessary
 #  build-opt will fail due to a scala optimizer bug
 #  and its interaction with the system jline
-ant -f scala-bootstript.xml build
-ant buildlocker build docs || exit 1
-pushd build/pack/lib
+ant -f scala-bootstript.xml dist
+pushd lib
 cp %{SOURCE1} bnd.properties
 java -jar $(build-classpath aqute-bnd) wrap -properties \
     bnd.properties scala-library.jar
@@ -195,7 +194,7 @@ rm -f test/files/run/t6223.scala
 
 install -d $RPM_BUILD_ROOT%{_bindir}
 for prog in scaladoc fsc scala scalac scalap; do
-        install -p -m 755 build/pack/bin/$prog $RPM_BUILD_ROOT%{_bindir}
+        install -p -m 755 bin/$prog $RPM_BUILD_ROOT%{_bindir}
 done
 
 install -p -m 755 -d $RPM_BUILD_ROOT%{_javadir}/scala
@@ -207,8 +206,10 @@ for libname in scala-compiler \
     scala-library \
     scala-reflect \
     scalap \
+    forkjoin \
+    fjbg \
     scala-swing ; do
-        install -m 644 build/pack/lib/$libname.jar $RPM_BUILD_ROOT%{_javadir}/scala/
+        install -m 644 lib/$libname.jar $RPM_BUILD_ROOT%{_javadir}/scala/
         shtool mkln -s $RPM_BUILD_ROOT%{_javadir}/scala/$libname.jar $RPM_BUILD_ROOT%{scaladir}/lib
         sed -i "s|@VERSION@|%{fullversion}|" src/build/maven/$libname-pom.xml
         sed -i "s|@RELEASE_REPOSITORY@|%{release_repository}|" src/build/maven/$libname-pom.xml
